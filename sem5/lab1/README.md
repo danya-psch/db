@@ -22,3 +22,17 @@
 |  ¬≥дношенн€ "game "<br>¬м≥щуЇ ≥нформац≥ю про гру що розробл€Їтьс€ компан≥Їю |  age_restrictions Ц м≥стить ≥нформац≥ю про в≥ков≥ обмеженн€ гри(int) <br>name Ц ун≥кальна назва гри(text) <br>genre Ц жанр гри(text)|
 | ¬≥дношенн€ " player " <br>¬м≥щуЇ ≥нформац≥ю про гравц€, що граЇ в гру |  date_of_birth Ц дата народженн€ гравц€(date)<br>nickname Ц ≥мТ€, €ке гравець використовуЇ у гр≥(text)<br> IP Ц ун≥кальний ≥дентиф≥катор, €кий використовуЇтьс€ дл€ адресац≥њ компТютера в мереж≥(text)|
 |  ¬≥дношенн€ " programmer "<br>¬м≥щуЇ ≥нформац≥ю про програм≥ста, €кий працюЇ в компан≥њ  |  date_of_birth Ц дата народженн€ програм≥ста(date) <br>full_name Ц повне ≥мТ€ програм≥ста(text) <br>salary Ц зароб≥тна плата програм≥ста(int) <br>experience Ц досв≥д робот≥ програм≥ста в роках(real) <br>company Ц назва компан≥њ в €к≥й працюЇ програм≥ст(text)|
+
+¬м≥ст таблиць бази даних
+
+Programmers
+![](https://github.com/DanyaPes/db/blob/master/sem5/lab1/table___programmer.png)
+
+Players
+![](https://github.com/DanyaPes/db/blob/master/sem5/lab1/table___player.png)
+
+Games
+![](https://github.com/DanyaPes/db/blob/master/sem5/lab1/table___game.png)
+
+Developer companies
+![](https://github.com/DanyaPes/db/blob/master/sem5/lab1/table___developer_company.png)
