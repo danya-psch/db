@@ -1,7 +1,7 @@
-﻿h1 Лабораторна робота No 2. Ознайомлення з базовими операціями СУБД PostgreSQL
+﻿Лабораторна робота No 2. Ознайомлення з базовими операціями СУБД PostgreSQL
 =====================
 
-h2 Варіант завданн
+Варіант завдання
 -----------------------------------
 15 варінт згідно номема у списку
 
@@ -9,15 +9,15 @@ h2 Варіант завданн
 |-------------|-----------|
 | Діапазон чисел, перелічення | Обов’язкове входження слова, ціла фраза|
 
-h2 Нормалізована модель даних
+Нормалізована модель даних
 -----------------------------------
 У порівнянні з попередньої лабораторною роботою, до таблиць game, programmer, player, developer_company були добавлені поля id, які стали единими первинними ключами відношень. До відношення developer_company був добвлений атрибут description.
-h2 Структура таблиць бази даних
+Структура таблиць бази даних
 -----------------------------------
 
 ![](https://github.com/DanyaPes/db/blob/master/sem5/lab2/img/database.png)
 
-h2 Опис структури бази даних
+Опис структури бази даних
 -----------------------------------
 
 
@@ -44,3 +44,18 @@ Games<br>
 
 Developer companies<br>
 ![](https://github.com/DanyaPes/db/blob/master/sem5/lab2/img/table___developer_company.png)
+
+Презентація роботи програми 
+
+Перегляд вмісту відношення game:
+![](https://github.com/DanyaPes/db/blob/master/sem5/lab2/img/list_of_games.png)
+
+Перегляд вмісту відношення player__game:
+![](https://github.com/DanyaPes/db/blob/master/sem5/lab2/img/list_of_players__games.png)
+
+Видалення рядку з таблиці game:
+![](https://github.com/DanyaPes/db/blob/master/sem5/lab2/img/deleting_game.png)
+
+
+
+
