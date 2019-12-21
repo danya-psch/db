@@ -33,7 +33,7 @@
 
 
 Завдання №1: оновлений програмний код
-=====================
+=====================13:53 21.12.2019
 ```
 model/__init__.py
 ```
@@ -311,11 +311,13 @@ SQL запити
 Завдання №4: скріншоти з ходом виконання запитів та їх результатів у обох транзакціях по кожному рівню ізоляції
 =====================
 READ COMMITTED
+-----------------------------------
+
 | Transction #1 | Transction #2 |
 |---------------|---------------|
 | ![](https://github.com/DanyaPes/db/blob/master/sem5/lab3/img/READ_COMMITTED_1.png)| ![](https://github.com/DanyaPes/db/blob/master/sem5/lab3/img/READ_COMMITTED_2.png)|
-=====================
-| Transction #1 | Transction #2 |
+-----------------------------------
+| Transction #1                                 | Transction #2                     |
 |![](https://github.com/DanyaPes/db/blob/master/sem5/lab3/img/READ_COMMITTED_3.png)||
 ||![](https://github.com/DanyaPes/db/blob/master/sem5/lab3/img/READ_COMMITTED_4.png)|
 |![](https://github.com/DanyaPes/db/blob/master/sem5/lab3/img/READ_COMMITTED_5.png)||
