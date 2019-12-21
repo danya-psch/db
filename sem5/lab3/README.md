@@ -332,4 +332,4 @@ REPEATABLE READ
 |![](https://github.com/DanyaPes/db/blob/master/sem5/lab3/img/REPEATABLE_READ_3.png)|               |
 |               |![](https://github.com/DanyaPes/db/blob/master/sem5/lab3/img/REPEATABLE_READ_4.png)|
 |![](https://github.com/DanyaPes/db/blob/master/sem5/lab3/img/REPEATABLE_READ_5.png)|               |
-|               |![](https://github.com/DanyaPes/db/blob/master/sem5/lab3/img/REPEATABLE_READ_6.png)|
+|![](https://github.com/DanyaPes/db/blob/master/sem5/lab3/img/REPEATABLE_READ_6.png)|               |
