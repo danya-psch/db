@@ -36,6 +36,7 @@
 
 ```
 model/__init__.py
+```
 
 ```python
 from model.model_config import *
