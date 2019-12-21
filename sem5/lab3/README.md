@@ -318,3 +318,18 @@ READ COMMITTED
 |               |![](https://github.com/DanyaPes/db/blob/master/sem5/lab3/img/READ_COMMITTED_6.png)|
 |![](https://github.com/DanyaPes/db/blob/master/sem5/lab3/img/READ_COMMITTED_7.png)|               |
 -----------------------------------
+
+REPEATABLE READ
+-----------------------------------
+
+| Transction #1 | Transction #2 |
+|---------------|---------------|
+| ![](https://github.com/DanyaPes/db/blob/master/sem5/lab3/img/REPEATABLE_READ_1.png)| ![](https://github.com/DanyaPes/db/blob/master/sem5/lab3/img/REPEATABLE_READ_2.png)|
+-----------------------------------
+
+| Transction #1                                                                     | Transction #2 |
+|-----------------------------------------------------------------------------------|---------------|
+|![](https://github.com/DanyaPes/db/blob/master/sem5/lab3/img/REPEATABLE_READ_3.png)|               |
+|               |![](https://github.com/DanyaPes/db/blob/master/sem5/lab3/img/REPEATABLE_READ_4.png)|
+|![](https://github.com/DanyaPes/db/blob/master/sem5/lab3/img/REPEATABLE_READ_5.png)|               |
+|               |![](https://github.com/DanyaPes/db/blob/master/sem5/lab3/img/REPEATABLE_READ_6.png)|
