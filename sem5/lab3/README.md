@@ -333,3 +333,19 @@ REPEATABLE READ
 |               |![](https://github.com/DanyaPes/db/blob/master/sem5/lab3/img/REPEATABLE_READ_4.png)|
 |![](https://github.com/DanyaPes/db/blob/master/sem5/lab3/img/REPEATABLE_READ_5.png)|               |
 |![](https://github.com/DanyaPes/db/blob/master/sem5/lab3/img/REPEATABLE_READ_6.png)|               |
+-----------------------------------
+
+SERIALIZABLE
+-----------------------------------
+
+| Transction #1 | Transction #2 |
+|---------------|---------------|
+| ![](https://github.com/DanyaPes/db/blob/master/sem5/lab3/img/SERIALIZABLE_1.png)| ![](https://github.com/DanyaPes/db/blob/master/sem5/lab3/img/SERIALIZABLE_2.png)|
+-----------------------------------
+
+| Transction #1                                                                     | Transction #2 |
+|-----------------------------------------------------------------------------------|---------------|
+|![](https://github.com/DanyaPes/db/blob/master/sem5/lab3/img/SERIALIZABLE_3.png)|               |
+|               |![](https://github.com/DanyaPes/db/blob/master/sem5/lab3/img/SERIALIZABLE_4.png)|
+|![](https://github.com/DanyaPes/db/blob/master/sem5/lab3/img/SERIALIZABLE_5.png)|               |
+|![](https://github.com/DanyaPes/db/blob/master/sem5/lab3/img/SERIALIZABLE_6.png)|               |
