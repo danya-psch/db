@@ -155,8 +155,155 @@ class Model(object):
             cls = Programmer
         return self._session.query(cls).filter_by(**{'id': id}).scalar() is not None
 ```
-Завдання №2: команди створення індексів, тексти і час виконання запитів SQL
 
+```
+model/developer_company.py
+```
+
+```python
+from sqlalchemy import Column, Integer, Text, Date
+from model.model_config import Base
+
+
+class DeveloperCompany(Base):
+    __tablename__ = 'developer_company'
+
+    def __init__(self, name: str, date_of_creation: Date, description: str, id: int = None):
+        self.id = id
+        self.name = name
+        self.date_of_creation = date_of_creation
+        self.description = description
+
+    id = Column(Integer, primary_key=True)
+    name = Column(Text, nullable=False)
+    date_of_creation = Column(Date, nullable=False)
+    description = Column(Text, nullable=False)
+
+    def get_data(self):
+        return self.id, self.name, self.date_of_creation, self.description
+
+    def __str__(self):
+        return f"DeveloperCompany [id={self.id}, name={self.name}, date_of_creation={self.date_of_creation}, " \
+               f"description={self.description}] "
+
+    @staticmethod
+    def create_obj(fields_list: dict):
+        return DeveloperCompany(**fields_list)
+
+```
+
+```
+model/game.py
+```
+
+```python
+from sqlalchemy import Column, Integer, Text
+from model.model_config import Base
+
+
+class Game(Base):
+    __tablename__ = 'game'
+
+    def __init__(self, name: str, genre: str, age_restrictions: int, id: int = None):
+        self.id = id
+        self.name = name
+        self.genre = genre
+        self.age_restrictions = age_restrictions
+
+    id = Column(Integer, primary_key=True)
+    name = Column(Text, nullable=False)
+    genre = Column(Text, nullable=False)
+    age_restrictions = Column(Integer, nullable=False)
+
+    def get_data(self):
+        return self.id, self.name, self.genre, self.age_restrictions
+
+    def __str__(self):
+        return f"Game [id={self.id}, name={self.name}, genre={self.genre}, age_restrictions={self.age_restrictions}]"
+
+    @staticmethod
+    def create_obj(fields_list: dict):
+        return Game(**fields_list)
+
+```
+
+```
+model/player.py
+```
+
+```python
+from sqlalchemy import Column, Integer, Text, Date
+from model.model_config import Base
+
+
+class Player(Base):
+    __tablename__ = 'player'
+
+    def __init__(self, nickname: str, ip: str, date_of_birth: Date, id: int = None):
+        self.id = id
+        self.nickname = nickname
+        self.ip = ip
+        self.date_of_birth = date_of_birth
+
+    id = Column(Integer, primary_key=True)
+    nickname = Column(Text, nullable=False)
+    ip = Column(Text, nullable=False)
+    date_of_birth = Column(Date, nullable=False)
+
+    def get_data(self):
+        return self.id, self.nickname, self.ip, self.date_of_birth
+
+    def __str__(self):
+        return f"Player [id={self.id}, nickname={self.nickname}, ip={self.ip}, age_restrictions={self.date_of_birth}]"
+
+    @staticmethod
+    def create_obj(fields_list: dict):
+        return Player(**fields_list)
+
+```
+
+```
+model/programmer.py
+```
+
+```python
+from sqlalchemy import ForeignKey, Column, Integer, Text, Date, Float
+from model.model_config import Base
+
+
+class Programmer(Base):
+    __tablename__ = 'programmer'
+
+    def __init__(self, name: str, salary: int, experience: float, developer_company_id: int, date_of_birth: Date, id: int = None):
+        self.id = id
+        self.name = name
+        self.salary = salary
+        self.experience = experience
+        self.developer_company_id = developer_company_id
+        self.date_of_birth = date_of_birth
+
+    id = Column(Integer, primary_key=True)
+    name = Column(Text, nullable=False)
+    salary = Column(Integer, nullable=False)
+    experience = Column(Float, nullable=False)
+    developer_company_id = Column(Integer, ForeignKey('developer_company.id', onupdate='restrict', ondelete='restrict'), nullable=False)
+    date_of_birth = Column(Date, nullable=False)
+
+    def get_data(self):
+        return self.id, self.name, self.salary, self.experience, self.developer_company_id, self.date_of_birth
+
+    def __str__(self):
+        return f"Player [id={self.id}, name={self.name}, salary={self.salary}, experience={self.experience}, " \
+               f"developer_company_id={self.developer_company_id}, date_of_birth={self.date_of_birth}] "
+
+    @staticmethod
+    def create_obj(fields_list: dict):
+        return Programmer(**fields_list)
+
+```
+Завдання №2: команди створення індексів, тексти і час виконання запитів SQL
+Команди SQL створення індексів
+SQL запити
 Завдання №3: команди, що ініціюють виконання тригера, текст тригера та скріншоти зі змінами у таблицях бази даних
 
 Завдання №4: скріншоти з ходом виконання запитів та їх результатів у обох транзакціях по кожному рівню ізоляції
