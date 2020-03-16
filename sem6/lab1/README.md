@@ -11,11 +11,11 @@
 
 | Базова сторінка (завдання 1) | Зміст завдання 2 | Адреса інтернет-магазину (завдання 3)| 
 |-------------|-----------|-----------|
-| [ua.igotoworld.com](ua.igotoworld.com) | Середня кількість графічних фрагментів | [allo.ua](allo.ua) |
+| [ua.igotoworld.com](https://ua.igotoworld.com) | Середня кількість графічних фрагментів | [allo.ua](https://allo.ua) |
 
 Лістинг коду
 -----------------------------------
-Збирання даних зі сторінки [ua.igotoworld.com](ua.igotoworld.com)
+Збирання даних зі сторінки [ua.igotoworld.com](https://ua.igotoworld.com)
 ```
 src/lab1/spiders/igotoworld.py
 ```
@@ -56,7 +56,7 @@ class IgotoworldSpider(scrapy.Spider):
 
 ```
 
-Збирання даних зі сторінки [allo.ua](allo.ua)
+Збирання даних зі сторінки [allo.ua](https://allo.ua)
 ```
 src/lab1/spiders/allo.py
 ```
