@@ -1,0 +1,51 @@
+import random
+import time
+from threading import Thread, Event
+import redis
+
+
+class Worker(Thread):
+
+    def __init__(self, delay):
+        Thread.__init__(self)
+        self.__stop_event = Event()
+        self.__r = redis.Redis(charset="utf-8", decode_responses=True)
+        self.__delay = delay
+
+    def run(self):
+        while True:
+            message = self.__r.brpop("queue:")
+            if message:
+                message_id = int(message[1])
+
+                self.__r.hmset(f"message:{message_id}", {
+                    'status': 'checking'
+                })
+                message = self.__r.hmget(f"message:{message_id}", ["sender_id", "consumer_id"])
+                sender_id = int(message[0])
+                consumer_id = int(message[1])
+                self.__r.hincrby(f"user:{sender_id}", "queue", -1)
+                self.__r.hincrby(f"user:{sender_id}", "checking", 1)
+                time.sleep(self.__delay)
+                is_spam = random.random() > 0.6
+                pipeline = self.__r.pipeline(True)
+                pipeline.hincrby(f"user:{sender_id}", "checking", -1)
+                if is_spam:
+                    sender_username = self.__r.hmget(f"user:{sender_id}", 'login')[0]
+                    pipeline.zincrby("spam:", 1, f"user:{sender_username}")
+                    pipeline.hmset(f"message:{message_id}", {
+                        'status': 'blocked'
+                    })
+                    pipeline.hincrby(f"user:{sender_id}", "blocked", 1)
+                    pipeline.publish('spam', f"User {sender_username} sent spam message: \"%s\"" %
+                                     self.__r.hmget("message:%s" % message_id, ["text"])[0])
+                else:
+                    pipeline.hmset(f"message:{message_id}", {
+                        'status': 'sent'
+                    })
+                    pipeline.hincrby(f"user:{sender_id}", "sent", 1)
+                    pipeline.sadd(f"sentto:{consumer_id}", message_id)
+                pipeline.execute()
+
+    def stop(self):
+        self.__stop_event.set()
