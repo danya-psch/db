@@ -1,429 +1,494 @@
-﻿Лабораторна робота No 1. Вивчення базових операцій обробки XML-документів
+﻿Лабораторна робота No 2. Практика використаннясервера Redis
 =====================
 
 Завдання
 -----------------------------------
-[Постановка завдання](http://scs.kpi.ua/sites/default/files/lab1_bd2-db2019_2020.docx.pdf)
-
-Варіант завдання
------------------------------------
-15 варінт згідно номема у списку
-
-| Базова сторінка\(завдання 1) | Зміст завдання 2 | Адреса інтернет-магазину\(завдання 3)| 
-|-------------|-----------|-----------|
-| [ua.igotoworld.com](https://ua.igotoworld.com) | Середня кількість графічних фрагментів | [allo.ua](https://allo.ua) |
+[Постановка завдання](http://scs.kpi.ua/sites/default/files/lab2_bd2-db2019_2020.pdf)
 
 Лістинг коду
 -----------------------------------
-Збирання даних зі сторінки [ua.igotoworld.com](https://ua.igotoworld.com)
 ```
-src/lab1/spiders/igotoworld.py
-```
-
-```python
-class IgotoworldSpider(scrapy.Spider):
-    name = 'igotoworld'
-    allowed_domains = ['ua.igotoworld.com']
-    start_urls = ['https://ua.igotoworld.com/ua/news_list/news.htm']
-
-    def parse(self, response: Response):
-        all_images = response.xpath("//img/@src[starts-with(., 'http')]")
-        all_text = response.xpath(
-            "//*[not(self::script)][not(self::style)][string-length(normalize-space(text())) > 30]/text()"
-        )
-        yield {
-            'url': response.url,
-            'payload': [
-                           {
-                               'type': 'text',
-                               'data': text.get().strip()
-                           } for text in all_text
-                       ] +
-                       [
-                           {
-                               'type': 'image',
-                               'data': image.get()
-                           } for image in all_images
-                       ]
-        }
-        if response.url == self.start_urls[0]:
-            all_links = response.xpath(
-                "//a/@href[starts-with(., 'https://ua.igotoworld.com/')][substring(., string-length() - 3) = '.htm']"
-            )
-            selected_links = [link.get() for link in all_links][:19]
-            for link in selected_links:
-                yield scrapy.Request(link, self.parse)
-
-```
-
-Збирання даних зі сторінки [allo.ua](https://allo.ua)
-```
-src/lab1/spiders/allo.py
+main.py
 ```
 
 ```python
-class AlloSpider(scrapy.Spider):
-    name = 'allo'
-    allowed_domains = ['allo.ua']
-    start_urls = ['https://allo.ua/ua/velosipedy/']
+def main():
+    fake = Faker()
+    users_count = 5
+    users = [fake.profile(fields=['username'], sex=None)['username'] for u in range(users_count)]
+    threads = []
+    try:
 
-    def start_requests(self):  #was a mistake without it (INFO: Ignoring response <403 https://allo.ua/ua/velosipedy/>: HTTP status code is not handled or not allowed)
-        headers = {'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64; rv:48.0) Gecko/20100101 Firefox/48.0'}
-        for url in self.start_urls:
-            yield Request(url, headers=headers)
+        for i in range(users_count):
+            threads.append(EmulationController(users[i], users, users_count))
+        for thread in threads:
+            thread.start()
 
-    def parse(self, response: Response):
-        products = response.xpath("//ul[(contains(@class, 'products-grid'))]/li[contains(@class, 'item')]")[:20]
-        for product in products:
-            yield {
-                'description': product.xpath(".//a[contains(@class, 'product-name')]/span/text()[1]").get(),
-                'price': product.xpath(".//span[contains(@class, 'new_sum')]/text()[1]").get(),
-                'img': product.xpath(".//img/@src").get()
-            }
+        workers_count = 5
+        workers = []
+        for x in range(workers_count):
+            worker = Worker(random.randint(0, 3))
+            workers.append(worker)
+            worker.start()
+
+        ucontroller = UserController()
+        ucontroller.start()
+
+        time.sleep(30)
+        for thread in threads:
+            thread.stop()
+        for worker in workers:
+            worker.stop()
+        print("\nEND")
+    except Exception as e:
+        View.show_error(str(e))
+
+
+if __name__ == "__main__":
+    main()
 ```
 
-Запис зібраних даних до файлів
-```
-src/lab1/pipelines.py
-```
 
-```python
-class Lab1Pipeline(object):
-    def open_spider(self, spider):
-        self.root = etree.Element("data" if spider.name == "igotoworld" else "shop")
-
-    def close_spider(self, spider):
-        with open('task%d.xml' % (1 if spider.name == "igotoworld" else 2), 'wb') as f:
-            f.write(etree.tostring(self.root, encoding="UTF-8", pretty_print=True, xml_declaration=True))
-
-    def process_item(self, item, spider):
-        if spider.name == "igotoworld":
-            page = etree.Element("page", url=item["url"])
-            for payload in item["payload"]:
-                fragment = etree.Element("fragment", type=payload["type"])
-                fragment.text = payload["data"]
-                page.append(fragment)
-            self.root.append(page)
-        else:
-            product = etree.Element("product")
-            desc = etree.Element("description")
-            desc.text = item["description"]
-            pr = etree.Element("price")
-            pr.text = item["price"]
-            img = etree.Element("image")
-            img.text = item["img"]
-            product.append(desc)
-            product.append(pr)
-            product.append(img)
-            self.root.append(product)
-        return item
 ```
-
-Завдання №1
-```
-src/main.py
+RedisServer.py
 ```
 
 ```python
-def task1():
-    print("Task 1:")
-    root = etree.parse("task1.xml")
-    avg = root.xpath("count(//fragment[@type='image']) div count(//page)")
-    print("Average amount of images on page: %.2f" % avg)
+class RedisServer(object):
+    def __init__(self):
+        self.__r = redis.Redis(charset="utf-8", decode_responses=True)
+
+    def registration(self, username, role):
+        if self.__r.hget('users:', username):
+            raise Exception(f"User with name: \'{username}\' already exists")
+
+        if role != 'utilizer' and role != 'admin':
+            raise Exception("There is not rule like that. Enter one of the following: utilizer, admin")
+
+        user_id = self.__r.incr('user:id:')
+        pipeline = self.__r.pipeline(True)
+        pipeline.hset('users:', username, user_id)
+        pipeline.hmset(f"user:{user_id}", {
+            'login': username,
+            'id': user_id,
+            'queue': 0,
+            'checking': 0,
+            'blocked': 0,
+            'sent': 0,
+            'delivered': 0,
+            'role': role
+        })
+
+        pipeline.execute()
+        logging.info(f"User {username} registered at {datetime.datetime.now()} \n")
+        return user_id
+
+    def sign_in(self, username):
+        user_id = self.__r.hget("users:", username)
+
+        if not user_id:
+            raise Exception(f"User {username} does not exist ")
+
+        self.__r.sadd("online:", username)
+        logging.info(f"User {username} logged in at {datetime.datetime.now()} \n")
+        return {'user_id': int(user_id), 'role': self.__r.hget(f"user:{int(user_id)}", 'role')}
+
+    def sign_out(self, user_id) -> int:
+        logging.info(f"User {user_id} signed out at {datetime.datetime.now()} \n")
+        return self.__r.srem("online:", self.__r.hmget(f"user:{user_id}", 'login')[0])
+
+    def create_message(self, message_text, consumer, sender_id) -> int:
+
+        message_id = int(self.__r.incr('message:id:'))
+        consumer_id = self.__r.hget("users:", consumer)
+
+        if not consumer_id:
+            raise Exception(f"{consumer} user does not exist, user can't send a message")
+
+        pipeline = self.__r.pipeline(True)
+
+        pipeline.hmset('message:%s' % message_id, {
+            'text': message_text,
+            'id': message_id,
+            'sender_id': sender_id,
+            'consumer_id': consumer_id,
+            'status': "created"
+        })
+        pipeline.lpush("queue:", message_id)
+        pipeline.hmset('message:%s' % message_id, {
+            'status': 'queue'
+        })
+        pipeline.zincrby("sent:", 1, "user:%s" % self.__r.hmget(f"user:{sender_id}", 'login')[0])
+        pipeline.hincrby(f"user:{sender_id}", "queue", 1)
+        pipeline.execute()
+
+        return message_id
+
+    def get_messages(self, user_id):
+        messages = self.__r.smembers(f"sentto:{user_id}")
+        messages_list = []
+        for message_id in messages:
+            message = self.__r.hmget(f"message:{message_id}", ["sender_id", "text", "status"])
+            sender_id = message[0]
+            messages_list.append("From: %s - %s" % (self.__r.hmget("user:%s" % sender_id, 'login')[0], message[1]))
+            if message[2] != "delivered":
+                pipeline = self.__r.pipeline(True)
+                pipeline.hset(f"message:{message_id}", "status", "delivered")
+                pipeline.hincrby(f"user:{sender_id}", "sent", -1)
+                pipeline.hincrby(f"user:{sender_id}", "delivered", 1)
+                pipeline.execute()
+        return messages_list
+
+    def get_message_statistics(self, user_id):
+        current_user = self.__r.hmget(f"user:{user_id}", ['queue', 'checking', 'blocked', 'sent', 'delivered'])
+        return "In queue: %s\nChecking: %s\nBlocked: %s\nSent: %s\nDelivered: %s" % tuple(current_user)
+
+    def get_online_users(self) -> list:
+        return self.__r.smembers("online:")
+
+    def get_top_senders(self, amount_of_top_senders) -> list:
+        return self.__r.zrange("sent:", 0, int(amount_of_top_senders) - 1, desc=True, withscores=True)
+
+    def get_top_spamers(self, amount_of_top_spamers) -> list:
+        return self.__r.zrange("spam:", 0, int(amount_of_top_spamers) - 1, desc=True, withscores=True)
 ```
 
-Завдання №2
 ```
-src/main.py
+Worker.py
 ```
 
 ```python
-def task2():
-    print("Task 2:")
-    transform = etree.XSLT(etree.parse("task2.xsl"))
-    result = transform(etree.parse("task2.xml"))
-    result.write("task2.xhtml", pretty_print=True, encoding="UTF-8")
-    print("XHTML page will be opened in browser")
-    webbrowser.open('file://' + os.path.realpath("task2.xhtml"))
+class Worker(Thread):
 
+    def __init__(self, delay):
+        Thread.__init__(self)
+        self.__stop_event = Event()
+        self.__r = redis.Redis(charset="utf-8", decode_responses=True)
+        self.__delay = delay
+
+    def run(self):
+        while True:
+            message = self.__r.brpop("queue:")
+            if message:
+                message_id = int(message[1])
+
+                self.__r.hmset(f"message:{message_id}", {
+                    'status': 'checking'
+                })
+                message = self.__r.hmget(f"message:{message_id}", ["sender_id", "consumer_id"])
+                sender_id = int(message[0])
+                consumer_id = int(message[1])
+                self.__r.hincrby(f"user:{sender_id}", "queue", -1)
+                self.__r.hincrby(f"user:{sender_id}", "checking", 1)
+                time.sleep(self.__delay)
+                is_spam = random.random() > 0.6
+                pipeline = self.__r.pipeline(True)
+                pipeline.hincrby(f"user:{sender_id}", "checking", -1)
+                if is_spam:
+                    sender_username = self.__r.hmget(f"user:{sender_id}", 'login')[0]
+                    pipeline.zincrby("spam:", 1, f"user:{sender_username}")
+                    pipeline.hmset(f"message:{message_id}", {
+                        'status': 'blocked'
+                    })
+                    pipeline.hincrby(f"user:{sender_id}", "blocked", 1)
+                    pipeline.publish('spam', f"User {sender_username} sent spam message: \"%s\"" %
+                                     self.__r.hmget("message:%s" % message_id, ["text"])[0])
+                else:
+                    pipeline.hmset(f"message:{message_id}", {
+                        'status': 'sent'
+                    })
+                    pipeline.hincrby(f"user:{sender_id}", "sent", 1)
+                    pipeline.sadd(f"sentto:{consumer_id}", message_id)
+                pipeline.execute()
+
+    def stop(self):
+        self.__stop_event.set()
 ```
 
 ```
-src/task2.xsl
+EmulationController.py
 ```
 
-```xsl
-<?xml version="1.0" encoding="UTF-8"?>
-<xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform" xmlns="http://www.w3.org/1999/xhtml">
-    <xsl:output
-        method="xml"
-        doctype-system="http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd"
-        doctype-public="-//W3C//DTD XHTML 1.1//EN"
-        indent="yes"
-    />
-    <xsl:template match="/">
-        <html xml:lang="en">
-            <head>
-                <title>Task 2</title>
-            </head>
-            <body>
-                <h1>Products:</h1>
-                <xsl:apply-templates select="/shop"/>
-            </body>
-        </html>
-    </xsl:template>
-    <xsl:template match="/shop">
-        <table border="1">
-            <thead>
-                <tr>
-                    <td>Image</td>
-                    <td>Description</td>
-                    <td>Price(UAH)</td>
-                </tr>
-            </thead>
-            <tbody>
-                <xsl:apply-templates select="/shop/product"/>
-            </tbody>
-        </table>
-    </xsl:template>
-    <xsl:template match="/shop/product">
-        <tr>
-            <td>
-                 <xsl:apply-templates select="image"/>
-            </td>
-            <td>
-                <xsl:apply-templates select="description"/>
-            </td>
-            <td>
-                <xsl:apply-templates select="price"/>
-            </td>
-        </tr>
-    </xsl:template>
-    <xsl:template match="image">
-        <img alt="image of product">
-            <xsl:attribute name="src">
-                <xsl:value-of select="text()"/>
-            </xsl:attribute>
-        </img>
-    </xsl:template>
-    <xsl:template match="price">
-        <xsl:value-of select="text()"/>
-    </xsl:template>
-    <xsl:template match="description">
-        <xsl:value-of select="text()"/>
-    </xsl:template>
-</xsl:stylesheet>
+```python
+class EmulationController(Thread):
+    def __init__(self, username, users_list, users_count):
+        Thread.__init__(self)
+        self.__stop_event = Event()
+        self.__server = RedisServer()
+        self.__users_list = users_list
+        self.__users_count = users_count
+        self.__server.registration(username, "utilizer")
+        self.__user_id = self.__server.sign_in(username)['user_id']
+
+    def run(self):
+        while True:
+            message_text = fake.sentence(nb_words=10, variable_nb_words=True, ext_word_list=None)
+            receiver = self.__users_list[randint(0, self.__users_count - 1)]
+            self.__server.create_message(message_text, receiver, self.__user_id)
+
+    def stop(self):
+        self.__server.sign_out(self.__user_id)
+        self.__stop_event.set()
+```
+
+```
+UserController.py
+```
+
+```python
+class UserController(Thread):
+    def __init__(self):
+        Thread.__init__(self)
+        self.__server = RedisServer()
+        self.__menu = 'Main menu'
+        self.__stop_event = Event()
+        self.__current_user_id = -1
+        self.__loop = True
+        atexit.register(self.sign_out, self)
+        # self.start()
+
+    def run(self):
+        from data import menu_list
+        try:
+            while self.__loop:
+                choice = UserController.make_choice(menu_list[self.__menu].keys(), self.__menu)
+                self.considering_choice(choice, list(menu_list[self.__menu].values()))
+        except Exception as e:
+            View.show_error(str(e))
+
+    @staticmethod
+    def make_choice(menu_list: list, name_of_menu: str):
+        try:
+            View.draw_menu(menu_list, name_of_menu)
+            return UserController.get_uint_value("Make your choice: ", len(menu_list))
+
+        except Exception as e:
+            View.show_error(str(e))
+
+    def considering_choice(self, choice: int, list_of_func: list):
+        try:
+            if choice > len(list_of_func) - 1:
+                raise Exception("func is not exist")
+
+            desired_func = list_of_func[choice]
+            desired_func(self)
+        except Exception as e:
+            View.show_error(str(e))
+
+    def stop(self):
+        self.sign_out(self)
+        self.__stop_event.set()
+
+    @staticmethod
+    def registration(controller):
+        controller.__server.registration(*controller.get_func_arguments(controller.__server.registration))
+
+    @staticmethod
+    def sign_in(controller):
+        pair = controller.__server.sign_in(*controller.get_func_arguments(controller.__server.sign_in))
+        controller.__current_user_id = pair['user_id']
+        from data import roles
+        controller.__menu = roles[pair['role']]
+
+    @staticmethod
+    def sign_out(controller):
+        if controller.__current_user_id != -1:
+            controller.__server.sign_out(controller.__current_user_id)
+            controller.__menu = 'Main menu'
+            controller.__current_user_id = -1
+
+    @staticmethod
+    def send_message(controller):
+        controller.__server.create_message(*controller.get_func_arguments(controller.__server.create_message, 1),
+                                           controller.__current_user_id)
+
+    @staticmethod
+    def inbox_message(controller):
+        messages = controller.__server.get_messages(controller.__current_user_id)
+        View.print_list("Messages:", messages)
+
+    @staticmethod
+    def get_message_statistics(controller):
+        statistics = controller.__server.get_message_statistics(controller.__current_user_id)
+        View.show_item(statistics)
+
+    @staticmethod
+    def get_online_users(controller):
+        online_users = controller.__server.get_online_users()
+        View.print_list("Online users: ", online_users)
+
+    @staticmethod
+    def get_top_senders(controller):
+        top_senders = controller.__server.get_top_senders(
+            *controller.get_func_arguments(controller.__server.get_top_senders))
+        View.print_list("Top senders: ", top_senders)
+
+    @staticmethod
+    def get_top_spamers(controller):
+        top_spamers = controller.__server.get_top_spamers(
+            *controller.get_func_arguments(controller.__server.get_top_spamers))
+        View.print_list("Top spamers: ", top_spamers)
+
+    @staticmethod
+    def stop(controller):
+        controller.__loop = False
+
+    @staticmethod
+    def get_func_arguments(func, amount_of_missing_arguments=0) -> list:
+        list_of_parameters = signature(func).parameters
+        list_of_arguments = []
+        length = len(list_of_parameters)
+        for i in range(length - amount_of_missing_arguments):
+            list_of_arguments.append(UserController.get_value(f"Enter {list(list_of_parameters)[i]}: ", str))
+        # for parameter in list_of_parameters:
+        #     list_of_arguments.append(Controller.get_value(f"Enter {parameter}: ", str))
+        return list_of_arguments
+
+    @staticmethod
+    def get_uint_value(msg: str, top_line: int = None):
+        while True:
+            number = input(msg)
+            if number.isdigit():
+                number = int(number)
+                if top_line is None or 0 <= number < top_line:
+                    return number
+
+    @staticmethod
+    def get_value(msg: str, type_of_var):
+        while True:
+            try:
+                usr_input = input(msg)
+                if type_of_var == str:
+                    if len(usr_input) != 0:
+                        return type_of_var(usr_input)
+                else:
+                    return type_of_var(usr_input)
+            except Exception as e:
+                View.show_error(str(e))
+```
+
+```
+view/__init__.py
+```
+
+```python
+class View(object):
+
+    @staticmethod
+    def draw_menu(menu_list, name_of_menu: str):
+        print(f"\n{name_of_menu}")
+        number = 0
+        for menu_item in menu_list:
+            print(f" {number}: {menu_item}")
+            number += 1
+
+    @staticmethod
+    def show_item(item):
+        print(f"Item: {item}")
+
+    @staticmethod
+    def show_items(items: list):
+        count = 1
+        for item in items:
+            print(f"{count}: {item}")
+            count += 1
+
+    @staticmethod
+    def show_error(err: str):
+        print(f"Error: {err}")
+
+    @staticmethod
+    def show_text(text: str):
+        print(text)
+
+    @staticmethod
+    def print_line():
+        print('-----------------------------------------------------------------------------------------')
+
+    @staticmethod
+    def print_list(name_of_list, list):
+        print(name_of_list)
+        count = 1
+        for item in list:
+            print(f"{count}: {item}")
+            count += 1
 ```
 
 Лістинг згенерованих файлів
 -----------------------------------
 ```
-task1.xml
+events.log
 ```
 
-```xml
-<?xml version='1.0' encoding='UTF-8'?>
-<data>
-  <page url="https://ua.igotoworld.com/ua/news_list/news.htm">
-    <fragment type="text">Новини України  - Останні новини про туризм, подорожі та відпочинок</fragment>
-    <fragment type="text">Косівську кераміку внесли до переліку нематеріальної спадщини ЮНЕСКО</fragment>
-    <fragment type="text">Музей народного мистецтва та побуту Гуцульщини, Косів</fragment>
-    <fragment type="text">вул. Незалежності 55, м. Косів 78600, Івано-Франківська обл., Україна</fragment>
-    <fragment type="text">Приємна новина для поціновувачів народної творчості – Косівську мальовану кераміку внесли до переліку нематеріальної культурної спадщини ЮНЕСКО.</fragment>
-    <fragment type="text">У Дніпрі відбувся наймасштабніший науково-популярний фестиваль Східної Європи</fragment>
-    <fragment type="text">вул. Космічна 20, м Дніпропетровськ, Дніпропетровська обл., Україна</fragment>
-    <fragment type="text">У Дніпрі відбувся наймасштабніший науково-популярний фестиваль Східної Європи – Interpipe TechFest 2019. Започаткований у 2016 році, цей захід щороку приваблює усе більше учасників та відвідувачів. Цього року до Дніпра з’їхалося понад 120 учасників технічних змагань, 36 спікерів – професіоналів своєї області та лідерів думок, у технічних змаганнях взяли участь більше 220 школярів.</fragment>
-    <fragment type="text">У Кривому Розі встановлять найвищий пам'ятник Володимиру Великому</fragment>
-    <fragment type="text">У Кривому Розі (Дніпропетровська область) незабаром буде встановлено пам'ятник князю Київської Русі Володимиру Великому. Бронзову восьмиметрову скульптуру вже відлито. Висота постаменту складе 14 метрів. Таким чином, загальна висота пам'ятника буде 22 метри, і він стане найвищим пам'ятником Володимиру Великому в Україні та Європі.</fragment>
-    <fragment type="text">У дніпровського комплексу CASCADE PLAZA найкраща ілюмінація</fragment>
-    <fragment type="text">Дніпровський комплекс CASCADE PLAZA відзначений нагородами за унікальне освітлення свого фасаду. Спочатку на престижному Нью-Йоркському конкурсі IES Illumination Awards, який відзначає кращі світлові рішення на архітектурних спорудах світу. Потім і на українському конкурсі Ukrainian Urban Awards 2018 у Києві.</fragment>
-    <fragment type="text">У Мукачеві з'явився «гусячий» маршрут</fragment>
-    <fragment type="text">У центрі Мукачева (Закарпатська область) встановили третю скульптуру гусака і завершили формування першої частини «гусячого» туристичного маршруту. Дві бронзові скульптури гусей, створені скульптором Степаном Федориним, прикрасили місто ще в 2016 році. Це гусак-фотограф і гусак-турист. Тепер же їх доповнив гусак-пивовар.</fragment>
-    <fragment type="text">У Києві встановили пам'ятник видатному співакові</fragment>
-    <fragment type="text">У столиці, на перехресті проспекту Чорновола та вулиці Січових Стрільців, відкрили сквер імені Мусліма Магомаєва і встановили там пам'ятник широко відомому оперному і естрадному співакові. Сталося це з ініціативи та за підтримки посольства Азербайджану в межах святкування 75-річчя від дня народження Магомаєва.</fragment>
-    <fragment type="text">Для віз до Канади тепер потрібна біометрія</fragment>
-    <fragment type="text">Для отримання віз до Канади українцям потрібно здавати біометричні дані: відбитки пальців і біометричні фото. Біометрія буде вимагатися для отримання туристичних віз, дозволів на навчання і роботу (за винятком громадян США), для постійного проживання, для отримання статусу біженця.</fragment>
-    <fragment type="text">З'явилася віртуальна прогулянка Запоріжжям</fragment>
-    <fragment type="text">Ви ще не були в Запоріжжі? Поки не виходить поїхати? Тоді до «живого» знайомства з цікавим містом можна познайомитися з ним віртуально. Запоріжжям проводиться віртуальний тур.</fragment>
-    <fragment type="text">Устрична ферма на Тилігульському лимані чекає туристів</fragment>
-    <fragment type="text">Устрична ферма «Устриці Скіфії» на березі Тилігульського лиману (Миколаївська область), недалеко від курорту Коблево, відкрита для туристів. Тут на свіжому повітрі можна насолодитися ніжним м'ясом устриць з тонким морським ароматом і вином. Унікальні устриці вирощують в екологічно чистій акваторії Чорного моря, в природному національному парку.</fragment>
-    <fragment type="text">9 мільйонів чоловік побачили аеропорти України в першому півріччі</fragment>
-    <fragment type="text">Пасажиропотік через аеропорти України в першому півріччі склав 8,9 мільйона чоловік. Це на 26,0% більше, ніж за аналогічний період минулого року, і взагалі рекордний показник для України.</fragment>
-    <fragment type="text">© IGotoWorld.com - Your GUIDE TO the WORLD. Всі права захищені.</fragment>
-    <fragment type="text">Копіювання матеріалів без дозволу адміністрації сайту заборонено.</fragment>
-    <fragment type="text">Ми цінуємо Вашу увагу і час, проведений з нами на сайті IGotoWorld.com. Якщо у Вас є запитання, побажання, скарги або ж Ви бажаєте більше дізнатись про нас, оберіть пункт, що Вас цікавить, і пройдіть за посиланням. Ми обов’язково приділимо Вам увагу.</fragment>
-    <fragment type="text">Проблеми з використанням ресурсу</fragment>
-    <fragment type="image">https://www.facebook.com/tr?id=1676725735920309&amp;ev=PageView&amp;noscript=1</fragment>
-    <fragment type="image">https://ua.igotoworld.com/frontend/webcontent/images/langs/flag-ua.png</fragment>
-    <fragment type="image">https://ua.igotoworld.com/frontend/webcontent/images/langs/flag-ua.png</fragment>
-    <fragment type="image">https://ua.igotoworld.com/frontend/webcontent/images/langs/flag-ru.png</fragment>
-    <fragment type="image">https://ua.igotoworld.com/frontend/webcontent/images/langs/flag-en.png</fragment>
-    <fragment type="image">https://ua.igotoworld.com/frontend/webcontent/images/homeIcon.png</fragment>
-    <fragment type="image">https://ua.igotoworld.com/frontend/webcontent/websites/1/file/TOP/top-sil-ua.gif</fragment>
-    <fragment type="image">https://ua.igotoworld.com/frontend/webcontent/websites/1/file/logo.png</fragment>
-    <fragment type="image">https://ua.igotoworld.com/frontend/webcontent/websites/1/file/logo.png</fragment>
-    <fragment type="image">https://ua.igotoworld.com/frontend/webcontent/websites/1/images/news/2707191_170x128_2701914_800x600_0-02-04-8409352abbbd747fbbda961112348330537314c370edd265a83e3ed2df4747d7_33fb6a25.jpg</fragment>
-    <fragment type="image">https://ua.igotoworld.com/frontend/webcontent/websites/1/file/logo.png</fragment>
-    <fragment type="image">https://ua.igotoworld.com/frontend/webcontent/websites/1/images/news/2705737_170x128_IMG_9064.jpg</fragment>
-    <fragment type="image">https://ua.igotoworld.com/frontend/webcontent/websites/1/file/logo.png</fragment>
-    <fragment type="image">https://ua.igotoworld.com/frontend/webcontent/websites/1/images/news/2684832_170x128_Vladimir.jpg</fragment>
-    <fragment type="image">https://ua.igotoworld.com/frontend/webcontent/websites/1/file/logo.png</fragment>
-    <fragment type="image">https://ua.igotoworld.com/frontend/webcontent/websites/1/images/news/2684801_170x128_Kompleks-1.jpg</fragment>
-    <fragment type="image">https://ua.igotoworld.com/frontend/webcontent/websites/1/file/logo.png</fragment>
-    <fragment type="image">https://ua.igotoworld.com/frontend/webcontent/websites/1/images/news/2684630_170x128_Gus.jpg</fragment>
-    <fragment type="image">https://ua.igotoworld.com/frontend/webcontent/websites/1/file/logo.png</fragment>
-    <fragment type="image">https://ua.igotoworld.com/frontend/webcontent/websites/1/images/news/2684680_170x128_Magomaev.jpg</fragment>
-    <fragment type="image">https://ua.igotoworld.com/frontend/webcontent/websites/1/file/logo.png</fragment>
-    <fragment type="image">https://ua.igotoworld.com/frontend/webcontent/websites/1/images/news/2684642_170x128_Biometrija.jpg</fragment>
-    <fragment type="image">https://ua.igotoworld.com/frontend/webcontent/websites/1/file/logo.png</fragment>
-    <fragment type="image">https://ua.igotoworld.com/frontend/webcontent/websites/1/images/news/2684629_170x128_HorticjaTetianaSmirnovaIGotoWorldPhotoGroup.jpg</fragment>
-    <fragment type="image">https://ua.igotoworld.com/frontend/webcontent/websites/1/file/logo.png</fragment>
-    <fragment type="image">https://ua.igotoworld.com/frontend/webcontent/websites/1/images/news/2684664_170x128_Ustricy.jpg</fragment>
-    <fragment type="image">https://ua.igotoworld.com/frontend/webcontent/websites/1/file/logo.png</fragment>
-    <fragment type="image">https://ua.igotoworld.com/frontend/webcontent/websites/1/images/news/2684628_170x128_BorispolTetianaSmirnovaIGotoWorldPG.jpg</fragment>
-    <fragment type="image">https://ua.igotoworld.com/frontend/webcontent/images/logo-small.png</fragment>
-  </page>
-  <page url="https://ua.igotoworld.com/ua/news_list/1042-news-ivano-frankivsk.htm">
-    <fragment type="text">Новини Івано-Франківська  - Останні новини про туризм, подорожі та відпочинок</fragment>
-    <fragment type="text">Новини Івано-Франківська область</fragment>
-    <fragment type="text">У Франківську пройде фестиваль народного одягу</fragment>
-    <fragment type="text">пров. Фортечний 1, м. Івано-Франківськ 76000, Україна</fragment>
-    <fragment type="text">Свої колекції представлять сучасні дизайнери. Фестиваль покликаний популяризувати народний одяг Карпатського регіону. Відбудеться перший фест уже невдовзі — 5 травня.</fragment>
-    <fragment type="text">В Івано-Франківську встановили нові скульптури</fragment>
-    <fragment type="text">пл. Ринок, Івано-Франківськ 76000, Україна</fragment>
-    <fragment type="text">Івано-Франківськ відтепер має нові туристичні родзинки. Колекцію кованих скульптур, що розміщені у центральній частині міста, поповнили ще дві. Їх виготовили ковалі на фестивалі ковальського мистецтва у 2016 році.</fragment>
-    <fragment type="text">В Івано-Франківську з'явилася підсвітка Фортечного провулку</fragment>
-    <fragment type="text">Станіславівська фортеця, Івано-Франківськ</fragment>
-    <fragment type="text">пров. Фортечний, Івано-Франківськ 76000, Україна</fragment>
-    <fragment type="text">В Івано-Франківську з'явилася гарна кольорова підсвітка Фортечного провулку, де розташована старовинна кріпосна стіна, що залишилася від Станіславівської фортеці. У серпні цього року провулок оновили: почистили стіну від трави, відреставрували фасади, встановили ліхтарі.</fragment>
-    <fragment type="text">В Івано-Франківську на екскурсію можна потрапити безкоштовно</fragment>
-    <fragment type="text">Таку цікаву акцію у місті організовують вже п’ятий рік поспіль. Стартують такі екскурсії у травні і тривають до кінця серпня.</fragment>
-    <fragment type="text">Івано-Франківськ – у Топ-5 найкращих міст Європи</fragment>
-    <fragment type="text">Це вже не перший подібний здобуток столиці Прикарпаття. Але попереду ще головний етап – боротьба з чотирма містами Європейського Союзу за першість.</fragment>
-    <fragment type="text">PORTO FRANKO ГогольFEST 2016: Івано-Франківськ стане мистецьким центром України</fragment>
-    <fragment type="text">вул. Галицька 4а, Івано-Франківськ 76000, Україна</fragment>
-    <fragment type="text">8–12 червня 2016 року в Івано-Франківську вперше відбудеться   міжнародний фестиваль «PORTO FRANKO ГогольFEST».</fragment>
-    <fragment type="text">© IGotoWorld.com - Your GUIDE TO the WORLD. Всі права захищені.</fragment>
-    <fragment type="text">Копіювання матеріалів без дозволу адміністрації сайту заборонено.</fragment>
-    <fragment type="text">Ми цінуємо Вашу увагу і час, проведений з нами на сайті IGotoWorld.com. Якщо у Вас є запитання, побажання, скарги або ж Ви бажаєте більше дізнатись про нас, оберіть пункт, що Вас цікавить, і пройдіть за посиланням. Ми обов’язково приділимо Вам увагу.</fragment>
-    <fragment type="text">Проблеми з використанням ресурсу</fragment>
-    <fragment type="image">https://www.facebook.com/tr?id=1676725735920309&amp;ev=PageView&amp;noscript=1</fragment>
-    <fragment type="image">https://ua.igotoworld.com/frontend/webcontent/images/langs/flag-ua.png</fragment>
-    <fragment type="image">https://ua.igotoworld.com/frontend/webcontent/images/langs/flag-ua.png</fragment>
-    <fragment type="image">https://ua.igotoworld.com/frontend/webcontent/images/langs/flag-ru.png</fragment>
-    <fragment type="image">https://ua.igotoworld.com/frontend/webcontent/images/langs/flag-en.png</fragment>
-    <fragment type="image">https://ua.igotoworld.com/frontend/webcontent/images/homeIcon.png</fragment>
-    <fragment type="image">https://ua.igotoworld.com/frontend/webcontent/websites/1/file/TOP/top-sil-ua.gif</fragment>
-    <fragment type="image">https://ua.igotoworld.com/frontend/webcontent/websites/1/file/logo.png</fragment>
-    <fragment type="image">https://ua.igotoworld.com/frontend/webcontent/websites/1/file/logo.png</fragment>
-    <fragment type="image">https://ua.igotoworld.com/frontend/webcontent/websites/1/images/news/2680864_170x128_ukrainskyi-narodnyi-odyag-2.jpg</fragment>
-    <fragment type="image">https://ua.igotoworld.com/frontend/webcontent/websites/1/file/logo.png</fragment>
-    <fragment type="image">https://ua.igotoworld.com/frontend/webcontent/websites/1/images/news/2211796_170x128_17883674_363670530700590_2147955968644529432_n—kopija.jpg</fragment>
-    <fragment type="image">https://ua.igotoworld.com/frontend/webcontent/websites/1/file/logo.png</fragment>
-    <fragment type="image">https://ua.igotoworld.com/frontend/webcontent/websites/1/images/news/2193576_170x128_Fortechniiprovulok,foto.jpg</fragment>
-    <fragment type="image">https://ua.igotoworld.com/frontend/webcontent/websites/1/file/logo.png</fragment>
-    <fragment type="image">https://ua.igotoworld.com/frontend/webcontent/websites/1/images/news/1934929_170x128_1.jpg</fragment>
-    <fragment type="image">https://ua.igotoworld.com/frontend/webcontent/websites/1/file/logo.png</fragment>
-    <fragment type="image">https://ua.igotoworld.com/frontend/webcontent/websites/1/images/news/1927193_170x128_bezymyannyy.jpg</fragment>
-    <fragment type="image">https://ua.igotoworld.com/frontend/webcontent/websites/1/file/logo.png</fragment>
-    <fragment type="image">https://ua.igotoworld.com/frontend/webcontent/websites/1/images/news/1029249_170x128_inside.jpg</fragment>
-    <fragment type="image">https://ua.igotoworld.com/frontend/webcontent/images/logo-small.png</fragment>
-  </page>
-...
-</data>
-```
+```log
+INFO:root:User steven66 registered at 2020-04-09 18:09:20.454372 
 
-```
-task2.xml
-```
+INFO:root:User steven66 logged in at 2020-04-09 18:09:20.454800 
 
-```xml
-<?xml version='1.0' encoding='UTF-8'?>
-<shop>
-  <product>
-    <description>Велосипед 24" Formula ACID 2.0 AM 14G DD 12,5" біло-малиновий з блакитним (м) 2019</description>
-    <price>3 880</price>
-    <image>https://i.allo.ua/media/catalog/product/cache/3/small_image/212x184/9df78eab33525d08d6e5fb8d27136e95/2/4/24_formula_acid_2.0_dd_-_2019.jpg</image>
-  </product>
-  <product>
-    <description>Велосипед Titan Spider 24" 12" green-black (24TJS18-16-5) 2019</description>
-    <price>3 499</price>
-    <image>https://i.allo.ua/media/catalog/product/cache/3/small_image/212x184/9df78eab33525d08d6e5fb8d27136e95/s/p/spider-24_24tjs18-16-5_right_side.jpg</image>
-  </product>
-  <product>
-    <description>Велосипед Rover Centurion Max 29"18" 2019 Black /Grey Green</description>
-    <price>4 600</price>
-    <image>https://i.allo.ua/media/catalog/product/cache/3/small_image/212x184/9df78eab33525d08d6e5fb8d27136e95/4/3/430035_1.jpg</image>
-  </product>
-  <product>
-    <description>Велосипед Rover Samson Plus 27.5"18" 2019 Grey/ Yellow Blue</description>
-    <price>3 900</price>
-    <image>https://i.allo.ua/media/catalog/product/cache/3/small_image/212x184/9df78eab33525d08d6e5fb8d27136e95/s/a/samson_plus_blakc_yellow_front_.jpg</image>
-  </product>
-...
-</shop>
-```
+INFO:root:User thomascrystal registered at 2020-04-09 18:09:20.456092 
 
-```
-task2.xhtml
-```
+INFO:root:User thomascrystal logged in at 2020-04-09 18:09:20.456574 
 
-```xhtml
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
-  <head>
-    <title>Task 2</title>
-  </head>
-  <body>
-    <h1>Products:</h1>
-    <table border="1">
-      <thead>
-        <tr>
-          <td>Image</td>
-          <td>Description</td>
-          <td>Price(UAH)</td>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td>
-            <img alt="image of product" src="https://i.allo.ua/media/catalog/product/cache/3/small_image/212x184/9df78eab33525d08d6e5fb8d27136e95/2/4/24_formula_acid_2.0_dd_-_2019.jpg"/>
-          </td>
-          <td>Велосипед 24" Formula ACID 2.0 AM 14G DD 12,5" біло-малиновий з блакитним (м) 2019</td>
-          <td>3 880</td>
-        </tr>
-        <tr>
-          <td>
-            <img alt="image of product" src="https://i.allo.ua/media/catalog/product/cache/3/small_image/212x184/9df78eab33525d08d6e5fb8d27136e95/s/p/spider-24_24tjs18-16-5_right_side.jpg"/>
-          </td>
-          <td>Велосипед Titan Spider 24" 12" green-black (24TJS18-16-5) 2019</td>
-          <td>3 499</td>
-        </tr>
-        <tr>
-          <td>
-            <img alt="image of product" src="https://i.allo.ua/media/catalog/product/cache/3/small_image/212x184/9df78eab33525d08d6e5fb8d27136e95/4/3/430035_1.jpg"/>
-          </td>
-          <td>Велосипед Rover Centurion Max 29"18" 2019 Black /Grey Green</td>
-          <td>4 600</td>
-        </tr>
-        <tr>
-          <td>
-            <img alt="image of product" src="https://i.allo.ua/media/catalog/product/cache/3/small_image/212x184/9df78eab33525d08d6e5fb8d27136e95/s/a/samson_plus_blakc_yellow_front_.jpg"/>
-          </td>
-          <td>Велосипед Rover Samson Plus 27.5"18" 2019 Grey/ Yellow Blue</td>
-          <td>3 900</td>
-        </tr>
-	...
-      </tbody>
-    </table>
-  </body>
-</html>
+INFO:root:User michael93 registered at 2020-04-09 18:09:20.457816 
 
+INFO:root:User michael93 logged in at 2020-04-09 18:09:20.458110 
+
+INFO:root:User michael48 registered at 2020-04-09 18:09:20.459246 
+
+INFO:root:User michael48 logged in at 2020-04-09 18:09:20.459515 
+
+INFO:root:User chamberssusan registered at 2020-04-09 18:09:20.460553 
+
+INFO:root:User chamberssusan logged in at 2020-04-09 18:09:20.460821 
+
+INFO:root:User admin registered at 2020-04-09 18:09:26.203206 
+
+INFO:root:User admin logged in at 2020-04-09 18:09:28.366059 
+
+INFO:root:User 6 signed out at 2020-04-09 18:09:48.158241 
+
+INFO:root:User 1 signed out at 2020-04-09 18:09:50.505600 
+
+INFO:root:User 2 signed out at 2020-04-09 18:09:50.524044 
+
+INFO:root:User 3 signed out at 2020-04-09 18:09:50.537189 
+
+INFO:root:User 4 signed out at 2020-04-09 18:09:50.546448 
+
+INFO:root:User 5 signed out at 2020-04-09 18:09:50.553150 
+
+INFO:root:User michael48 logged in at 2020-04-09 18:10:05.735256 
+
+INFO:root:User 4 signed out at 2020-04-09 18:10:23.555879 
 ```
 
 Приклади роботи програми
 -----------------------------------
-![](https://github.com/danya-psch/db/blob/master/sem6/lab1/img/task1.png)
-![](https://github.com/danya-psch/db/blob/master/sem6/lab1/img/task2.png)
-![](https://github.com/danya-psch/db/blob/master/sem6/lab1/img/table.png)
+Main menu
+-----------------------------------
+![](https://github.com/danya-psch/db/blob/master/sem6/lab2/img/main_menu.png)
+-----------------------------------
+Online users
+-----------------------------------
+![](https://github.com/danya-psch/db/blob/master/sem6/lab2/img/online_users.png)
+-----------------------------------
+Inbox messages
+-----------------------------------
+![](https://github.com/danya-psch/db/blob/master/sem6/lab2/img/inbox_messages.png)
+-----------------------------------
+Message statistics
+-----------------------------------
+![](https://github.com/danya-psch/db/blob/master/sem6/lab2/img/message_statistics.png)
+-----------------------------------
+Message sending
+-----------------------------------
+![](https://github.com/danya-psch/db/blob/master/sem6/lab2/img/send_a_message.png)
+-----------------------------------
+Top senders
+-----------------------------------
+![](https://github.com/danya-psch/db/blob/master/sem6/lab2/img/top_senders.png)
+-----------------------------------
+Top spamers
+-----------------------------------
+![](https://github.com/danya-psch/db/blob/master/sem6/lab2/img/top_spamers.png)
 
