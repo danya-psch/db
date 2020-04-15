@@ -1,6 +1,6 @@
 import random
 import time
-from threading import Thread, Event
+from threading import Thread
 import redis
 
 
@@ -8,12 +8,12 @@ class Worker(Thread):
 
     def __init__(self, delay):
         Thread.__init__(self)
-        self.__stop_event = Event()
+        self.__loop = True
         self.__r = redis.Redis(charset="utf-8", decode_responses=True)
         self.__delay = delay
 
     def run(self):
-        while True:
+        while self.__loop:
             message = self.__r.brpop("queue:")
             if message:
                 message_id = int(message[1])
@@ -48,4 +48,5 @@ class Worker(Thread):
                 pipeline.execute()
 
     def stop(self):
-        self.__stop_event.set()
+        self.__loop = False
+

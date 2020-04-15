@@ -1,28 +1,26 @@
 from inspect import signature
 import atexit
 
-from threading import Thread, Event
 from view import View
 from redis_server.RedisServer import RedisServer
 
 
-class UserController(Thread):
+class UserController(object):
     def __init__(self):
-        Thread.__init__(self)
         self.__server = RedisServer()
         self.__menu = 'Main menu'
-        self.__stop_event = Event()
         self.__current_user_id = -1
         self.__loop = True
         atexit.register(self.sign_out, self)
-        # self.start()
+        self.start()
 
-    def run(self):
+    def start(self):
         from data import menu_list
         try:
             while self.__loop:
                 choice = UserController.make_choice(menu_list[self.__menu].keys(), self.__menu)
                 self.considering_choice(choice, list(menu_list[self.__menu].values()))
+
         except Exception as e:
             View.show_error(str(e))
 
@@ -44,10 +42,6 @@ class UserController(Thread):
             desired_func(self)
         except Exception as e:
             View.show_error(str(e))
-
-    def stop(self):
-        self.sign_out(self)
-        self.__stop_event.set()
 
     @staticmethod
     def registration(controller):
@@ -100,16 +94,18 @@ class UserController(Thread):
         View.print_list("Top spamers: ", top_spamers)
 
     @staticmethod
-    def stop(controller):
+    def stop_loop(controller):
         controller.__loop = False
 
     @staticmethod
     def get_func_arguments(func, amount_of_missing_arguments=0) -> list:
+        from data import special_parameters
         list_of_parameters = signature(func).parameters
         list_of_arguments = []
         length = len(list_of_parameters)
         for i in range(length - amount_of_missing_arguments):
-            list_of_arguments.append(UserController.get_value(f"Enter {list(list_of_parameters)[i]}: ", str))
+            list_of_arguments.append(UserController.get_value(
+                f"Enter {list(list_of_parameters)[i]}{ special_parameters[list(list_of_parameters)[i]] if list(list_of_parameters)[i] in special_parameters else '' }: ", str))
         # for parameter in list_of_parameters:
         #     list_of_arguments.append(Controller.get_value(f"Enter {parameter}: ", str))
         return list_of_arguments

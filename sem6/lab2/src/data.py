@@ -4,7 +4,7 @@ menu_list = {
     'Main menu': {
         'Registration': UserController.registration,
         'Sign in': UserController.sign_in,
-        'Exit': UserController.stop,
+        'Exit': UserController.stop_loop,
     },
     'Utilizer menu': {
         'Sign out': UserController.sign_out,
@@ -23,4 +23,8 @@ menu_list = {
 roles = {
     'utilizer': 'Utilizer menu',
     'admin': 'Admin menu'
+}
+
+special_parameters = {
+    'role': '(admin or utilizer)'
 }
