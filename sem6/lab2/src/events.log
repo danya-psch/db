@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 INFO:root:User sreese registered at 2020-04-15 13:16:00.279462 
 
 INFO:root:User sreese logged in at 2020-04-15 13:16:00.280356 
@@ -112,3 +113,5 @@ INFO:root:User 15 signed out at 2020-04-15 14:18:08.215855
 
 INFO:root:User 17 signed out at 2020-04-15 14:18:08.218089 
 
+=======
+>>>>>>> 19e41781022cd7677c8dc73fa74df62e6d34222c

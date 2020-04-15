@@ -15,12 +15,14 @@ main.py
 def main():
     fake = Faker()
     users_count = 5
+    r = redis.Redis()
+    r.flushall()
     users = [fake.profile(fields=['username'], sex=None)['username'] for u in range(users_count)]
     threads = []
     try:
 
         for i in range(users_count):
-            threads.append(EmulationController(users[i], users, users_count))
+            threads.append(EmulationController(users[i], users, users_count, random.randint(100, 5000)))
         for thread in threads:
             thread.start()
 
@@ -31,14 +33,14 @@ def main():
             workers.append(worker)
             worker.start()
 
-        ucontroller = UserController()
-        ucontroller.start()
+        UserController()
 
-        time.sleep(30)
         for thread in threads:
-            thread.stop()
+            if thread.is_alive():
+                thread.stop()
         for worker in workers:
             worker.stop()
+
         print("\nEND")
     except Exception as e:
         View.show_error(str(e))
@@ -54,6 +56,9 @@ RedisServer.py
 ```
 
 ```python
+logging.basicConfig(filename="./events.log", level=logging.INFO, filemode='w')
+
+
 class RedisServer(object):
     def __init__(self):
         self.__r = redis.Redis(charset="utf-8", decode_responses=True)
@@ -151,6 +156,7 @@ class RedisServer(object):
 
     def get_top_spamers(self, amount_of_top_spamers) -> list:
         return self.__r.zrange("spam:", 0, int(amount_of_top_spamers) - 1, desc=True, withscores=True)
+
 ```
 
 ```
@@ -162,12 +168,12 @@ class Worker(Thread):
 
     def __init__(self, delay):
         Thread.__init__(self)
-        self.__stop_event = Event()
+        self.__loop = True
         self.__r = redis.Redis(charset="utf-8", decode_responses=True)
         self.__delay = delay
 
     def run(self):
-        while True:
+        while self.__loop:
             message = self.__r.brpop("queue:")
             if message:
                 message_id = int(message[1])
@@ -202,7 +208,8 @@ class Worker(Thread):
                 pipeline.execute()
 
     def stop(self):
-        self.__stop_event.set()
+        self.__loop = False
+
 ```
 
 ```
@@ -210,10 +217,13 @@ EmulationController.py
 ```
 
 ```python
+fake = Faker()
+
+
 class EmulationController(Thread):
-    def __init__(self, username, users_list, users_count):
+    def __init__(self, username, users_list, users_count, loop_count):
         Thread.__init__(self)
-        self.__stop_event = Event()
+        self.__loop_count = loop_count
         self.__server = RedisServer()
         self.__users_list = users_list
         self.__users_count = users_count
@@ -221,14 +231,17 @@ class EmulationController(Thread):
         self.__user_id = self.__server.sign_in(username)['user_id']
 
     def run(self):
-        while True:
+        while self.__loop_count > 0:
             message_text = fake.sentence(nb_words=10, variable_nb_words=True, ext_word_list=None)
             receiver = self.__users_list[randint(0, self.__users_count - 1)]
             self.__server.create_message(message_text, receiver, self.__user_id)
+            self.__loop_count -= 1
+
+        self.stop()
 
     def stop(self):
         self.__server.sign_out(self.__user_id)
-        self.__stop_event.set()
+        self.__loop_count = 0
 ```
 
 ```
@@ -236,23 +249,22 @@ UserController.py
 ```
 
 ```python
-class UserController(Thread):
+class UserController(object):
     def __init__(self):
-        Thread.__init__(self)
         self.__server = RedisServer()
         self.__menu = 'Main menu'
-        self.__stop_event = Event()
         self.__current_user_id = -1
         self.__loop = True
         atexit.register(self.sign_out, self)
-        # self.start()
+        self.start()
 
-    def run(self):
+    def start(self):
         from data import menu_list
         try:
             while self.__loop:
                 choice = UserController.make_choice(menu_list[self.__menu].keys(), self.__menu)
                 self.considering_choice(choice, list(menu_list[self.__menu].values()))
+
         except Exception as e:
             View.show_error(str(e))
 
@@ -274,10 +286,6 @@ class UserController(Thread):
             desired_func(self)
         except Exception as e:
             View.show_error(str(e))
-
-    def stop(self):
-        self.sign_out(self)
-        self.__stop_event.set()
 
     @staticmethod
     def registration(controller):
@@ -330,16 +338,18 @@ class UserController(Thread):
         View.print_list("Top spamers: ", top_spamers)
 
     @staticmethod
-    def stop(controller):
+    def stop_loop(controller):
         controller.__loop = False
 
     @staticmethod
     def get_func_arguments(func, amount_of_missing_arguments=0) -> list:
+        from data import special_parameters
         list_of_parameters = signature(func).parameters
         list_of_arguments = []
         length = len(list_of_parameters)
         for i in range(length - amount_of_missing_arguments):
-            list_of_arguments.append(UserController.get_value(f"Enter {list(list_of_parameters)[i]}: ", str))
+            list_of_arguments.append(UserController.get_value(
+                f"Enter {list(list_of_parameters)[i]}{ special_parameters[list(list_of_parameters)[i]] if list(list_of_parameters)[i] in special_parameters else '' }: ", str))
         # for parameter in list_of_parameters:
         #     list_of_arguments.append(Controller.get_value(f"Enter {parameter}: ", str))
         return list_of_arguments
@@ -379,7 +389,7 @@ menu_list = {
     'Main menu': {
         'Registration': UserController.registration,
         'Sign in': UserController.sign_in,
-        'Exit': UserController.stop,
+        'Exit': UserController.stop_loop,
     },
     'Utilizer menu': {
         'Sign out': UserController.sign_out,
@@ -398,6 +408,10 @@ menu_list = {
 roles = {
     'utilizer': 'Utilizer menu',
     'admin': 'Admin menu'
+}
+
+special_parameters = {
+    'role': '(admin or utilizer)'
 }
 ```
 
