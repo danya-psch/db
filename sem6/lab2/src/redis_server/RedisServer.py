@@ -2,7 +2,7 @@ import redis
 import datetime
 import logging
 
-logging.basicConfig(filename="./events.log", level=logging.INFO, filemode='w')
+logging.basicConfig(filename="./events.log", level=logging.INFO)
 
 
 class RedisServer(object):

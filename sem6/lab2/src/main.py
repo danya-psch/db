@@ -7,11 +7,9 @@ import random
 import redis
 
 
-def main():
+def emulation():
     fake = Faker()
     users_count = 5
-    r = redis.Redis()
-    r.flushall()
     users = [fake.profile(fields=['username'], sex=None)['username'] for u in range(users_count)]
     threads = []
     try:
@@ -35,11 +33,14 @@ def main():
                 thread.stop()
         for worker in workers:
             worker.stop()
-
-        print("\nEND")
     except Exception as e:
         View.show_error(str(e))
 
 
 if __name__ == "__main__":
-    main()
+
+    choice = UserController.make_choice(["Main", "Emulation"], "Program mode")
+    if choice == 0:
+        UserController()
+    elif choice == 1:
+        emulation()
