@@ -1,10 +1,12 @@
 from controller.UserController import UserController
+from controller.AdminController import AdminController
+from controller.Controller import Controller
 
 menu_list = {
     'Main menu': {
         'Registration': UserController.registration,
         'Sign in': UserController.sign_in,
-        'Exit': UserController.stop_loop,
+        'Exit': Controller.stop_loop,
     },
     'Utilizer menu': {
         'Sign out': UserController.sign_out,
@@ -13,10 +15,11 @@ menu_list = {
         'My messages statistics': UserController.get_message_statistics,
     },
     'Admin menu': {
-        'Sign out': UserController.sign_out,
-        'Online users': UserController.get_online_users,
-        'Top senders': UserController.get_top_senders,
-        'Top spamers': UserController.get_top_spamers,
+        'Sign out': Controller.stop_loop,
+        'Get events': AdminController.get_events,
+        'Online users': AdminController.get_online_users,
+        'Top senders': AdminController.get_top_senders,
+        'Top spamers': AdminController.get_top_spamers,
     }
 }
 

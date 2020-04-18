@@ -9,12 +9,9 @@ class RedisServer(object):
     def __init__(self):
         self.__r = redis.Redis(charset="utf-8", decode_responses=True)
 
-    def registration(self, username, role):
+    def registration(self, username):
         if self.__r.hget('users:', username):
             raise Exception(f"User with name: \'{username}\' already exists")
-
-        if role != 'utilizer' and role != 'admin':
-            raise Exception("There is not rule like that. Enter one of the following: utilizer, admin")
 
         user_id = self.__r.incr('user:id:')
         pipeline = self.__r.pipeline(True)
@@ -26,8 +23,7 @@ class RedisServer(object):
             'checking': 0,
             'blocked': 0,
             'sent': 0,
-            'delivered': 0,
-            'role': role
+            'delivered': 0
         })
 
         pipeline.execute()
@@ -42,10 +38,12 @@ class RedisServer(object):
 
         self.__r.sadd("online:", username)
         logging.info(f"User {username} logged in at {datetime.datetime.now()} \n")
-        return {'user_id': int(user_id), 'role': self.__r.hget(f"user:{int(user_id)}", 'role')}
+        self.__r.publish('users', "User %s signed in" % self.__r.hmget(f"user:{user_id}", 'login')[0])
+        return int(user_id)
 
     def sign_out(self, user_id) -> int:
         logging.info(f"User {user_id} signed out at {datetime.datetime.now()} \n")
+        self.__r.publish('users', "User %s signed out" % self.__r.hmget(f"user:{user_id}", 'login')[0])
         return self.__r.srem("online:", self.__r.hmget(f"user:{user_id}", 'login')[0])
 
     def create_message(self, message_text, consumer, sender_id) -> int:
@@ -102,3 +100,4 @@ class RedisServer(object):
 
     def get_top_spamers(self, amount_of_top_spamers) -> list:
         return self.__r.zrange("spam:", 0, int(amount_of_top_spamers) - 1, desc=True, withscores=True)
+

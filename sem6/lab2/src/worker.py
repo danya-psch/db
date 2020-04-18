@@ -1,7 +1,10 @@
 import random
+import threading
 import time
 from threading import Thread
 import redis
+
+from view import View
 
 
 class Worker(Thread):
@@ -39,6 +42,7 @@ class Worker(Thread):
                     pipeline.hincrby(f"user:{sender_id}", "blocked", 1)
                     pipeline.publish('spam', f"User {sender_username} sent spam message: \"%s\"" %
                                      self.__r.hmget("message:%s" % message_id, ["text"])[0])
+                    print(f"User {sender_username} sent spam message: \"%s\"" % self.__r.hmget("message:%s" % message_id, ["text"])[0])
                 else:
                     pipeline.hmset(f"message:{message_id}", {
                         'status': 'sent'
@@ -50,3 +54,18 @@ class Worker(Thread):
     def stop(self):
         self.__loop = False
 
+
+if __name__ == '__main__':
+    try:
+        loop = True
+        workers_count = 5
+        workers = []
+        for x in range(workers_count):
+            worker = Worker(random.randint(0, 3))
+            worker.setDaemon(True)
+            workers.append(worker)
+            worker.start()
+        while True:
+            pass
+    except Exception as e:
+        View.show_error(str(e))
