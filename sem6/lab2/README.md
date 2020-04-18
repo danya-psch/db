@@ -12,6 +12,7 @@ main.py
 ```
 
 ```python
+
 def emulation():
     fake = Faker()
     users_count = 5
@@ -24,27 +25,18 @@ def emulation():
         for thread in threads:
             thread.start()
 
-        workers_count = 5
-        workers = []
-        for x in range(workers_count):
-            worker = Worker(random.randint(0, 3))
-            workers.append(worker)
-            worker.start()
-
-        UserController()
+        AdminController()
 
         for thread in threads:
             if thread.is_alive():
                 thread.stop()
-        for worker in workers:
-            worker.stop()
     except Exception as e:
         View.show_error(str(e))
 
 
 if __name__ == "__main__":
 
-    choice = UserController.make_choice(["Main", "Emulation"], "Program mode")
+    choice = Controller.make_choice(["Main", "Emulation"], "Program mode")
     if choice == 0:
         UserController()
     elif choice == 1:
@@ -57,19 +49,13 @@ RedisServer.py
 ```
 
 ```python
-logging.basicConfig(filename="./events.log", level=logging.INFO, filemode='w')
-
-
 class RedisServer(object):
     def __init__(self):
         self.__r = redis.Redis(charset="utf-8", decode_responses=True)
 
-    def registration(self, username, role):
+    def registration(self, username):
         if self.__r.hget('users:', username):
             raise Exception(f"User with name: \'{username}\' already exists")
-
-        if role != 'utilizer' and role != 'admin':
-            raise Exception("There is not rule like that. Enter one of the following: utilizer, admin")
 
         user_id = self.__r.incr('user:id:')
         pipeline = self.__r.pipeline(True)
@@ -81,8 +67,7 @@ class RedisServer(object):
             'checking': 0,
             'blocked': 0,
             'sent': 0,
-            'delivered': 0,
-            'role': role
+            'delivered': 0
         })
 
         pipeline.execute()
@@ -97,10 +82,12 @@ class RedisServer(object):
 
         self.__r.sadd("online:", username)
         logging.info(f"User {username} logged in at {datetime.datetime.now()} \n")
-        return {'user_id': int(user_id), 'role': self.__r.hget(f"user:{int(user_id)}", 'role')}
+        self.__r.publish('users', "User %s signed in" % self.__r.hmget(f"user:{user_id}", 'login')[0])
+        return int(user_id)
 
     def sign_out(self, user_id) -> int:
         logging.info(f"User {user_id} signed out at {datetime.datetime.now()} \n")
+        self.__r.publish('users', "User %s signed out" % self.__r.hmget(f"user:{user_id}", 'login')[0])
         return self.__r.srem("online:", self.__r.hmget(f"user:{user_id}", 'login')[0])
 
     def create_message(self, message_text, consumer, sender_id) -> int:
@@ -158,6 +145,7 @@ class RedisServer(object):
     def get_top_spamers(self, amount_of_top_spamers) -> list:
         return self.__r.zrange("spam:", 0, int(amount_of_top_spamers) - 1, desc=True, withscores=True)
 
+
 ```
 
 ```
@@ -200,6 +188,7 @@ class Worker(Thread):
                     pipeline.hincrby(f"user:{sender_id}", "blocked", 1)
                     pipeline.publish('spam', f"User {sender_username} sent spam message: \"%s\"" %
                                      self.__r.hmget("message:%s" % message_id, ["text"])[0])
+                    print(f"User {sender_username} sent spam message: \"%s\"" % self.__r.hmget("message:%s" % message_id, ["text"])[0])
                 else:
                     pipeline.hmset(f"message:{message_id}", {
                         'status': 'sent'
@@ -211,6 +200,22 @@ class Worker(Thread):
     def stop(self):
         self.__loop = False
 
+
+if __name__ == '__main__':
+    try:
+        loop = True
+        workers_count = 5
+        workers = []
+        for x in range(workers_count):
+            worker = Worker(random.randint(0, 3))
+            worker.setDaemon(True)
+            workers.append(worker)
+            worker.start()
+        while True:
+            pass
+    except Exception as e:
+        View.show_error(str(e))
+
 ```
 
 ```
@@ -218,9 +223,6 @@ EmulationController.py
 ```
 
 ```python
-fake = Faker()
-
-
 class EmulationController(Thread):
     def __init__(self, username, users_list, users_count, loop_count):
         Thread.__init__(self)
@@ -228,8 +230,8 @@ class EmulationController(Thread):
         self.__server = RedisServer()
         self.__users_list = users_list
         self.__users_count = users_count
-        self.__server.registration(username, "utilizer")
-        self.__user_id = self.__server.sign_in(username)['user_id']
+        self.__server.registration(username)
+        self.__user_id = self.__server.sign_in(username)
 
     def run(self):
         while self.__loop_count > 0:
@@ -255,92 +257,118 @@ class UserController(object):
         self.__server = RedisServer()
         self.__menu = 'Main menu'
         self.__current_user_id = -1
-        self.__loop = True
-        atexit.register(self.sign_out, self)
+        self.loop = True
+        atexit.register(self.sign_out)
         self.start()
 
     def start(self):
         from data import menu_list
         try:
-            while self.__loop:
-                choice = UserController.make_choice(menu_list[self.__menu].keys(), self.__menu)
-                self.considering_choice(choice, list(menu_list[self.__menu].values()))
+            while self.loop:
+                choice = Controller.make_choice(menu_list[self.__menu].keys(), self.__menu)
+                Controller.considering_choice(self, choice, list(menu_list[self.__menu].values()))
+
+        except Exception as e:
+            View.show_error(str(e))
+
+    def registration(self):
+        self.__server.registration(*Controller.get_func_arguments(self.__server.registration))
+
+    def sign_in(self):
+        user_id = self.__server.sign_in(*Controller.get_func_arguments(self.__server.sign_in))
+        self.__current_user_id = user_id
+
+        self.__menu = 'Utilizer menu'
+
+    def sign_out(self):
+        if self.__current_user_id != -1:
+            self.__server.sign_out(self.__current_user_id)
+            self.__menu = 'Main menu'
+            self.__current_user_id = -1
+
+    def send_message(self):
+        self.__server.create_message(*Controller.get_func_arguments(self.__server.create_message, 1),
+                                           self.__current_user_id)
+
+    def inbox_message(self):
+        messages = self.__server.get_messages(self.__current_user_id)
+        View.print_list("Messages:", messages)
+
+    def get_message_statistics(self):
+        statistics = self.__server.get_message_statistics(self.__current_user_id)
+        View.show_item(statistics)
+```
+
+
+```
+AdminController.py
+```
+
+
+```python
+class AdminController(object):
+    def __init__(self):
+        self.__server = RedisServer()
+        self.loop = True
+        self.__listener = EventListener()
+        self.__listener.start()
+        self.start()
+
+    def start(self):
+        from data import menu_list
+        try:
+            menu = "Admin menu"
+            while self.loop:
+                choice = Controller.make_choice(menu_list[menu].keys(), menu)
+                Controller.considering_choice(self, choice, list(menu_list[menu].values()))
+        except Exception as e:
+            View.show_error(str(e))
+
+    def get_events(self):
+        events = self.__listener.get_events()
+        View.print_list("Events: ", events)
+
+    def get_online_users(self):
+        online_users = self.__server.get_online_users()
+        View.print_list("Online users: ", online_users)
+
+    def get_top_senders(self):
+        top_senders = self.__server.get_top_senders(
+            *Controller.get_func_arguments(self.__server.get_top_senders))
+        View.print_list("Top senders: ", top_senders)
+
+    def get_top_spamers(self):
+        top_spamers = self.__server.get_top_spamers(
+            *Controller.get_func_arguments(self.__server.get_top_spamers))
+        View.print_list("Top spamers: ", top_spamers)
+```
+
+
+```
+Controller.py
+```
+
+```python
+class Controller(object):
+    @staticmethod
+    def make_choice(menu_list: list, name_of_menu: str):
+        try:
+            View.draw_menu(menu_list, name_of_menu)
+            return Controller.get_uint_value("Make your choice: ", len(menu_list))
 
         except Exception as e:
             View.show_error(str(e))
 
     @staticmethod
-    def make_choice(menu_list: list, name_of_menu: str):
-        try:
-            View.draw_menu(menu_list, name_of_menu)
-            return UserController.get_uint_value("Make your choice: ", len(menu_list))
-
-        except Exception as e:
-            View.show_error(str(e))
-
-    def considering_choice(self, choice: int, list_of_func: list):
+    def considering_choice(controller, choice: int, list_of_func: list):
         try:
             if choice > len(list_of_func) - 1:
                 raise Exception("func is not exist")
 
             desired_func = list_of_func[choice]
-            desired_func(self)
+            desired_func(controller)
         except Exception as e:
             View.show_error(str(e))
-
-    @staticmethod
-    def registration(controller):
-        controller.__server.registration(*controller.get_func_arguments(controller.__server.registration))
-
-    @staticmethod
-    def sign_in(controller):
-        pair = controller.__server.sign_in(*controller.get_func_arguments(controller.__server.sign_in))
-        controller.__current_user_id = pair['user_id']
-        from data import roles
-        controller.__menu = roles[pair['role']]
-
-    @staticmethod
-    def sign_out(controller):
-        if controller.__current_user_id != -1:
-            controller.__server.sign_out(controller.__current_user_id)
-            controller.__menu = 'Main menu'
-            controller.__current_user_id = -1
-
-    @staticmethod
-    def send_message(controller):
-        controller.__server.create_message(*controller.get_func_arguments(controller.__server.create_message, 1),
-                                           controller.__current_user_id)
-
-    @staticmethod
-    def inbox_message(controller):
-        messages = controller.__server.get_messages(controller.__current_user_id)
-        View.print_list("Messages:", messages)
-
-    @staticmethod
-    def get_message_statistics(controller):
-        statistics = controller.__server.get_message_statistics(controller.__current_user_id)
-        View.show_item(statistics)
-
-    @staticmethod
-    def get_online_users(controller):
-        online_users = controller.__server.get_online_users()
-        View.print_list("Online users: ", online_users)
-
-    @staticmethod
-    def get_top_senders(controller):
-        top_senders = controller.__server.get_top_senders(
-            *controller.get_func_arguments(controller.__server.get_top_senders))
-        View.print_list("Top senders: ", top_senders)
-
-    @staticmethod
-    def get_top_spamers(controller):
-        top_spamers = controller.__server.get_top_spamers(
-            *controller.get_func_arguments(controller.__server.get_top_spamers))
-        View.print_list("Top spamers: ", top_spamers)
-
-    @staticmethod
-    def stop_loop(controller):
-        controller.__loop = False
 
     @staticmethod
     def get_func_arguments(func, amount_of_missing_arguments=0) -> list:
@@ -349,8 +377,9 @@ class UserController(object):
         list_of_arguments = []
         length = len(list_of_parameters)
         for i in range(length - amount_of_missing_arguments):
-            list_of_arguments.append(UserController.get_value(
-                f"Enter {list(list_of_parameters)[i]}{ special_parameters[list(list_of_parameters)[i]] if list(list_of_parameters)[i] in special_parameters else '' }: ", str))
+            list_of_arguments.append(Controller.get_value(
+                f"Enter {list(list_of_parameters)[i]}{special_parameters[list(list_of_parameters)[i]] if list(list_of_parameters)[i] in special_parameters else ''}: ",
+                str))
         # for parameter in list_of_parameters:
         #     list_of_arguments.append(Controller.get_value(f"Enter {parameter}: ", str))
         return list_of_arguments
@@ -376,8 +405,11 @@ class UserController(object):
                     return type_of_var(usr_input)
             except Exception as e:
                 View.show_error(str(e))
-```
 
+    @staticmethod
+    def stop_loop(controller):
+        controller.loop = False
+```
 
 ```
 data.py
