@@ -13,6 +13,13 @@ class View(object):
         print(f"Item: {item}")
 
     @staticmethod
+    def show_way(nodes: list):
+        way = ""
+        for node in nodes:
+            way += f"{node} ->"
+        print(way[:-3])
+
+    @staticmethod
     def show_items(items: list):
         count = 1
         for item in items:

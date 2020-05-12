@@ -1,8 +1,7 @@
-from controller.AdminController import AdminController
+
 from controller.Controller import Controller
 from controller.EmulationController import EmulationController
-from controller.UserController import UserController
-from servers.neo4j_server.Neo4jServer import Neo4jServer
+from controller.Neo4jController import Neo4jController
 from view import View
 from faker import Faker
 import random
@@ -17,11 +16,12 @@ def emulation():
     try:
 
         for i in range(users_count):
-            threads.append(EmulationController(users[i], users, users_count, random.randint(1, 3)))
+            threads.append(EmulationController(users[i], users, users_count, random.randint(1, 2)))
         for thread in threads:
             thread.start()
 
-        AdminController()
+        # Neo4jInterface()
+        # AdminController()
 
     except Exception as e:
         View.show_error(str(e))
@@ -32,10 +32,11 @@ def emulation():
 
 
 if __name__ == "__main__":
-    neo4j = Neo4jServer()
-    neo4j.create_message(1, 2, {"id": 1, "tags": ["work"]})
-    choice = Controller.make_choice(["Main", "Emulation"], "Program mode")
+    # neo4j = Neo4jServer()
+    # res = neo4j.get_users()
+
+    choice = Controller.make_choice(["Neo4j", "Emulation(use one time with worker for generate db)"], "Program mode")
     if choice == 0:
-        UserController()
+        Neo4jController()
     elif choice == 1:
         emulation()
