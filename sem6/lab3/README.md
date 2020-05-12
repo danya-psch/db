@@ -292,29 +292,29 @@ special_parameters = {
 -----------------------------------
 Main menu
 -----------------------------------
-![](https://github.com/danya-psch/db/blob/master/sem6/lab3/img/main_menu.png)
+![](https://github.com/danya-psch/db/blob/master/sem6/lab3/img/main_menu.jpg)
 -----------------------------------
 Neo4j menu
 -----------------------------------
-![](https://github.com/danya-psch/db/blob/master/sem6/lab3/img/neo4j_menu.png)
+![](https://github.com/danya-psch/db/blob/master/sem6/lab3/img/neo4j_menu.jpg)
 -----------------------------------
 Пункт 6.1
 -----------------------------------
-![](https://github.com/danya-psch/db/blob/master/sem6/lab3/img/6.1.png)
+![](https://github.com/danya-psch/db/blob/master/sem6/lab3/img/6.1.jpg)
 -----------------------------------
 Пункт 6.2
 -----------------------------------
-![](https://github.com/danya-psch/db/blob/master/sem6/lab3/img/6.2.png)
+![](https://github.com/danya-psch/db/blob/master/sem6/lab3/img/6.2.jpg)
 -----------------------------------
 Пункт 6.3
 -----------------------------------
-![](https://github.com/danya-psch/db/blob/master/sem6/lab3/img/6.3.png)
+![](https://github.com/danya-psch/db/blob/master/sem6/lab3/img/6.3.jpg)
 -----------------------------------
 Пункт 6.4
 -----------------------------------
-![](https://github.com/danya-psch/db/blob/master/sem6/lab3/img/6.4.png)
+![](https://github.com/danya-psch/db/blob/master/sem6/lab3/img/6.4.jpg)
 -----------------------------------
 Пункт 6.5
 -----------------------------------
-![](https://github.com/danya-psch/db/blob/master/sem6/lab3/img/6.5.png)
+![](https://github.com/danya-psch/db/blob/master/sem6/lab3/img/6.5.jpg)
 
