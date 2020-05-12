@@ -1,7 +1,6 @@
 from controller.Controller import Controller
 from servers.neo4j_server.Neo4jServer import Neo4jServer
 from view import View
-from subprocess import call
 
 
 class Neo4jController(object):

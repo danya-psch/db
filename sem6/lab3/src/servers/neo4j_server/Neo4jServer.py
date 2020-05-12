@@ -1,5 +1,4 @@
 from neo4j import GraphDatabase
-import json
 
 from view import View
 from controller.Controller import Tags
@@ -40,15 +39,6 @@ class Neo4jServer(object):
                     session.write_transaction(self.__add_tag_to_messages, messages_id, tag)
             except Exception as e:
                 View.show_error(str(e))
-
-    # @staticmethod
-    # def __create_message_as_node(tx, message_id, tags: list):
-    #     res = tx.run("MATCH (m:messages {redis_id: $message_id}) RETURN m", message_id=message_id)
-    #     if res.peek() is not None:
-    #         raise Exception(f"Message with id: {message_id} already exists")
-    #
-    #     tx.run("MERGE (m:messages {redis_id: $message_id})"
-    #            "ON CREATE SET m.tags = $tags, m.delivered = false, m.spam = false", message_id=message_id, tags=tags)
 
     @staticmethod
     def __create_message_as_relation(tx, sender_id, consumer_id, message_id):
@@ -138,15 +128,6 @@ class Neo4jServer(object):
                               f"reduce(total_len = 0, r IN relationships(p)| total_len + size(r.all)) = {n} "
                               f"RETURN u1, u2")
             return self.__pair_record_to_list(res, 'name')
-            # my_list = list(res)
-            # my_list = list(dict.fromkeys(my_list))
-            # new_list = []
-            # for el in my_list:
-            #     list_el = list(el)
-            #     if list_el not in new_list and list_el[::-1] not in new_list:
-            #         new_list.append(el)
-            #
-            # return new_list
 
     def get_users_wicth_have_only_spam_conversation(self):
         with self.__driver.session() as session:

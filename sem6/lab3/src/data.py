@@ -3,24 +3,6 @@ from controller.Controller import Controller, Tags
 from servers.neo4j_server.Neo4jServer import Neo4jServer
 
 menu_list = {
-    # 'Main menu': {
-    #     'Registration': UserController.registration,
-    #     'Sign in': UserController.sign_in,
-    #     'Exit': Controller.stop_loop,
-    # },
-    # 'Utilizer menu': {
-    #     'Sign out': UserController.sign_out,
-    #     'Send a message': UserController.send_message,
-    #     'Inbox messages': UserController.inbox_message,
-    #     'My messages statistics': UserController.get_message_statistics,
-    # },
-    # 'Admin menu': {
-    #     'Sign out': Controller.stop_loop,
-    #     'Get events': AdminController.get_events,
-    #     'Online users': AdminController.get_online_users,
-    #     'Top senders': AdminController.get_top_senders,
-    #     'Top spamers': AdminController.get_top_spamers,
-    # },
     'Neo4j menu': {
         'Tagged messages(6.1)': Neo4jController.get_users_with_tagged_messages,
         'N long relations(6.2)': Neo4jController.get_users_with_n_long_relations,

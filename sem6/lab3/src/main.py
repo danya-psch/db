@@ -20,9 +20,6 @@ def emulation():
         for thread in threads:
             thread.start()
 
-        # Neo4jInterface()
-        # AdminController()
-
     except Exception as e:
         View.show_error(str(e))
     finally:
@@ -32,9 +29,6 @@ def emulation():
 
 
 if __name__ == "__main__":
-    # neo4j = Neo4jServer()
-    # res = neo4j.get_users()
-
     choice = Controller.make_choice(["Neo4j", "Emulation(use one time with worker for generate db)"], "Program mode")
     if choice == 0:
         Neo4jController()
