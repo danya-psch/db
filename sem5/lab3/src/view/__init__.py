@@ -2,6 +2,8 @@ from model.model_config import TypeOfTable, list_of_fields
 from prettytable import PrettyTable
 
 
+#check
+
 class View(object):
 
     @staticmethod
